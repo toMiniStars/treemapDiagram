@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tree Map App</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+	background-color: aquamarine;
+  }
+  #title {
+    text-align: center;
+    font-size: 24px;
+    margin-top: 20px;
+  }
+  #description {
+    text-align: center;
+    font-size: 18px;
+    margin-top: 10px;
+  }
+  #tree-map-container {
+    margin: 20px;
+    position: relative;
+  }
+  .tile {
+    stroke: #fff;
+  }
+  .tile:hover {
+    opacity: 0.8;
+  }
+  #tooltip {
+    position: absolute;
+    padding: 10px;
+    background: #f0f0f0;
+    border: 1px solid #888;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #legend {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+  }
+  .legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+  }
+
+  /* Color scheme for categories */
+  .ProductDesign { fill: #1f77b4; }
+  .TabletopGames { fill: #ff7f0e; }
+  .Action { fill: #2ca02c; }
+  .Drama { fill: #d62728; }
+  .Strategy { fill: #9467bd; }
+  .Adventure { fill: #8c564b; }
+  .Shooter { fill: #e377c2; }
+  .Family { fill: #7f7f7f; }
+  .RolePlaying { fill: #bcbd22; }
+  .Racing { fill: #17becf; }
+</style>
+</head>
+<body>
+  <div id="title">Tree Map App</div>
+  <div id="description">Select a dataset:</div>
+  <div>
+    <button onclick="loadData('kickstarter')">Kickstarter Pledges</button>
+    <button onclick="loadData('movies')">Movie Sales</button>
+    <button onclick="loadData('videoGames')">Video Game Sales</button>
+  </div>
+  <div id="tree-map-container"></div>
+  <div id="tooltip"></div>
+  <div id="legend"></div>
+
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script>
+    const width = 1000;
+    const height = 600;
+
+    const svg = d3.select("#tree-map-container")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    const tooltip = d3.select("#tooltip");
+
+    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const legendData = [
+      { category: "Product Design", color: colorScale("ProductDesign") },
+      { category: "Tabletop Games", color: colorScale("TabletopGames") },
+      { category: "Action", color: colorScale("Action") },
+      { category: "Drama", color: colorScale("Drama") },
+    ];
+
+    const legend = d3.select("#legend")
+      .selectAll(".legend-item")
+      .data(legendData)
+      .enter()
+      .append("div")
+      .attr("class", "legend-item");
+
+    legend.append("div")
+      .attr("class", "legend-color")
+      .style("background-color", d => d.color);
+
+    legend.append("div")
+      .text(d => d.category);
+
+    function loadData(dataset) {
+document.addEventListener("DOMContentLoaded", () => {
+  loadData("movies");
+});
+      d3.json(getDatasetUrl(dataset)).then(data => {
+        const root = d3.hierarchy(data)
+          .sum(d => d.value)
+          .sort((a, b) => b.value - a.value);
+
+        const treemap = d3.treemap()
+          .size([width, height])
+          .paddingInner(1);
+
+        treemap(root);
+
+        svg.selectAll(".tile").remove();
+
+        const tiles = svg.selectAll(".tile")
+          .data(root.leaves())
+          .enter()
+          .append("rect")
+          .attr("class", "tile")
+          .attr("x", d => d.x0)
+          .attr("y", d => d.y0)
+          .attr("width", d => d.x1 - d.x0)
+          .attr("height", d => d.y1 - d.y0)
+          .attr("data-name", d => d.data.name)
+          .attr("data-category", d => d.data.category)
+          .attr("data-value", d => d.data.value)
+          .attr("fill", d => colorScale(d.data.category))
+          .on("mouseover", (event, d) => {
+            tooltip.transition().duration(200).style("opacity", 0.9);
+            tooltip.html(`${d.data.name}<br>Category: ${d.data.category}<br>Value: $${d.data.value}`)
+              .attr("data-value", d.data.value)
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY + 10 + "px");
+          })
+          .on("mouseout", () => {
+            tooltip.transition().duration(200).style("opacity", 0);
+          });
+
+        // Update the class for the tree map and legend based on the selected dataset
+        svg.attr("class", dataset);
+        legend.attr("class", `${dataset} legend-item`);
+      });
+    }
+
+    function getDatasetUrl(dataset) {
+      switch (dataset) {
+        case "kickstarter":
+          return "https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/kickstarter-funding-data.json";
+        case "movies":
+          return "https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/movie-data.json";
+        case "videoGames":
+          return "https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/video-game-sales-data.json";
+        default:
+          return "";
+      }
+    }
+  </script>
+  <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+</body>
+</html>
